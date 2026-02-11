@@ -60,3 +60,15 @@ async function notifyReadingTimeApp(isViolation) {
         }).catch(() => { });
     }
 }
+
+// background.js (เพิ่มต่อท้ายไฟล์เดิม)
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // รับคำขอตรวจเช็คสถานะการเปิด/ปิด สวิตช์จากหน้าเว็บ
+    if (request.action === "GET_STATUS") {
+        chrome.storage.local.get(['isEnabled'], (data) => {
+            sendResponse({ isEnabled: data.isEnabled ?? true });
+        });
+        return true; // สำคัญ: แจ้งว่าเป็น Async Response
+    }
+});
