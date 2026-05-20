@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Guardian Focus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="card mb-3">
+        <div class="flex-between">
+            <div class="flex-center gap-2">
+                <div class="icon-box" style="background: #FEF2F2; color: #EF4444;">
+                    <span class="emoji-icon">🛡️</span>
+                </div>
+                <div>
+                    <h1 class="title">Guardian Focus</h1>
+                    <div class="flex-center gap-1 mt-1">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span class="subtitle" id="statusText">Active</span>
+                    </div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="masterToggle">
+                <span class="slider round"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="background: #FEF2F2; border-color: #FCA5A5;">
+        <div class="flex-between">
+            <div class="flex-center gap-2">
+                <span class="emoji-icon">🔥</span>
+                <div>
+                    <h1 class="title" style="color: #DC2626;">โหมดตั้งใจเรียน</h1>
+                    <div class="subtitle" style="color: #B91C1C;">บังหน้าจอเว็บที่ไม่อนุญาต</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="strictModeToggle">
+                <span class="slider round" id="strictSlider"></span>
+            </label>
+        </div>
+        <style>
+            /* เปลี่ยนสีสวิตช์เป็นสีแดงเมื่อเปิดโหมดตั้งใจเรียน */
+            #strictModeToggle:checked + #strictSlider { background-color: #DC2626; }
+        </style>
+    </div>
+
+    <div class="card mb-3 control-panel">
+        <div class="current-site-display mb-3" id="siteStatusBox">
+            <span class="label">เว็บปัจจุบัน:</span>
+            <span id="currentDomainLabel" class="domain-name">...</span>
+        </div>
+
+        <div class="speed-control-row mb-2">
+            <div style="flex-grow: 1; text-align: center; font-size: 14px; font-weight: bold;" id="siteStatusText">
+                กำลังตรวจสอบ...
+            </div>
+            <button id="toggleAllowBtn" class="btn-circle"
+                style="width: auto; padding: 0 15px; border-radius: 8px; font-weight: bold; font-family: 'Sarabun';">
+                อนุญาตเว็บนี้
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-between items-end mb-2">
+        <label class="section-label">เว็บไซต์ที่อนุญาต (Allowed Sites)</label>
+        <span class="badge" id="countBadge">0 เว็บ</span>
+    </div>
+
+    <div class="card p-0 overflow-hidden">
+        <div id="siteList" class="list-container">
+            <div class="empty-state">ยังไม่มีการบันทึก</div>
+        </div>
+        <div class="input-area" style="text-align: center;">
+            <button id="clearAllBtn" class="text-btn">คืนค่าเริ่มต้น (รีเซ็ต)</button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
