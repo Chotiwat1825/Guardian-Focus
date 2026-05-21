@@ -61,7 +61,9 @@ chrome.runtime.onConnect.addListener((port) => {
                 chrome.storage.local.set({
                     isTimerRunning: false,
                     isReadingMode: false,
-                    isBreakMode: false
+                    isBreakMode: false,
+                    targetEndTime: null,
+                    warningSeconds: null
                 });
             }
         });
@@ -85,13 +87,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "SET_TIMER_STATE") {
-        const { isTimerRunning, isReadingMode } = request;
+        const { isTimerRunning, isReadingMode, targetEndTime } = request;
         const isBreakMode = isTimerRunning ? !isReadingMode : false;
 
         chrome.storage.local.set({
             isTimerRunning,
             isReadingMode,
-            isBreakMode
+            isBreakMode,
+            targetEndTime: targetEndTime || null
         }, () => {
             checkActiveTab();
         });
@@ -99,6 +102,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (sender.tab) {
             webAppTabIds.add(sender.tab.id);
         }
+        sendResponse({ success: true });
+    }
+
+    if (request.action === "CLOSE_CURRENT_TAB") {
+        if (sender.tab && sender.tab.id) {
+            chrome.tabs.remove(sender.tab.id);
+        }
+        sendResponse({ success: true });
+    }
+
+    if (request.action === "SET_WARNING_SECONDS") {
+        chrome.storage.local.set({
+            warningSeconds: request.seconds !== undefined ? request.seconds : null
+        });
         sendResponse({ success: true });
     }
 });
