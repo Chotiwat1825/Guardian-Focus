@@ -10,10 +10,12 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 function checkAndBlockSelf() {
-    chrome.storage.local.get(['isEnabled', 'allowedSites', 'isStrictMode', 'isBreakMode'], (data) => {
+    chrome.storage.local.get(['isEnabled', 'allowedSites', 'isStrictMode', 'isBreakMode', 'isTimerRunning', 'isReadingMode'], (data) => {
         const isEnabled = data.isEnabled ?? true;
         const isStrictMode = data.isStrictMode || false;
         const isBreakMode = data.isBreakMode || false; // 🌟 โหลดค่าโหมดพักเบรก
+        const isTimerRunning = data.isTimerRunning || false;
+        const isReadingMode = data.isReadingMode ?? true;
         const allowedSites = data.allowedSites || [DEFAULT_MAIN_URL, 'localhost', '127.0.0.1'];
 
         const currentDomain = window.location.hostname;
@@ -22,8 +24,8 @@ function checkAndBlockSelf() {
             return;
         }
 
-        // 🌟 ปลดล็อกทันทีถ้าอยู่ในโหมด "พักเบรก" หรือปิดสวิตช์
-        if (!isEnabled || isBreakMode) {
+        // 🌟 ปลดล็อกทันทีถ้าปิดสวิตช์ หรือไม่ได้อยู่ในระหว่างการจับเวลา หรืออยู่ในช่วงพักเบรก หรือไม่ได้อยู่ในโหมดโฟกัส
+        if (!isEnabled || !isTimerRunning || !isReadingMode || isBreakMode) {
             removeStrictModeBlocker();
             return;
         }
@@ -83,6 +85,35 @@ window.addEventListener('GuardianSetBreakMode', (e) => {
         chrome.runtime.sendMessage({ action: "SET_BREAK_MODE", isBreak: isBreak });
     } catch (err) { }
 });
+
+// 🌟 ฟัง Event สถานะการจับเวลาและโหมดการอ่านจากเว็บ Reading Time
+window.addEventListener('GuardianTimerState', (e) => {
+    try {
+        const { isTimerRunning, isReadingMode } = e.detail;
+        chrome.runtime.sendMessage({
+            action: "SET_TIMER_STATE",
+            isTimerRunning,
+            isReadingMode
+        });
+    } catch (err) { }
+});
+
+// 🌟 ตรวจสอบและเชื่อมต่อพอร์ตไปยัง background.js หากเป็นหน้าเว็บจับเวลา
+if (document.getElementById('mainAppCard')) {
+    connectToBackground();
+}
+
+function connectToBackground() {
+    try {
+        const port = chrome.runtime.connect({ name: "reading-time" });
+        port.onDisconnect.addListener(() => {
+            // ลองเชื่อมต่อใหม่หลังจาก 5 วินาทีหากขาดการติดต่อ
+            setTimeout(connectToBackground, 5000);
+        });
+    } catch (e) {
+        // ส่วนขยายอาจถูกรีโหลด
+    }
+}
 
 // ==========================================
 // ฟังก์ชันสำหรับบังหน้าเว็บ (Strict Mode Overlay)
