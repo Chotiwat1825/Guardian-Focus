@@ -67,54 +67,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-window.addEventListener('GuardianPing', () => {
-    try {
-        chrome.runtime.sendMessage({ action: "GET_STATUS" }, (response) => {
-            if (chrome.runtime.lastError || !response) {
-                window.dispatchEvent(new CustomEvent('GuardianPong', {
-                    detail: { connected: true, isEnabled: false, error: true }
-                }));
-            } else {
-                window.dispatchEvent(new CustomEvent('GuardianPong', {
-                    detail: { connected: true, isEnabled: response.isEnabled }
-                }));
-            }
-        });
-    } catch (e) {
-        window.dispatchEvent(new CustomEvent('GuardianPong', { detail: { connected: false } }));
+window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    const message = event.data;
+    if (!message || message.source !== 'reading-time-web-app') return;
+
+    if (message.type === 'GuardianPing') {
+        try {
+            chrome.runtime.sendMessage({ action: "GET_STATUS" }, (response) => {
+                if (chrome.runtime.lastError || !response) {
+                    window.dispatchEvent(new CustomEvent('GuardianPong', {
+                        detail: { connected: true, isEnabled: false, error: true }
+                    }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('GuardianPong', {
+                        detail: { connected: true, isEnabled: response.isEnabled }
+                    }));
+                }
+            });
+        } catch (e) {
+            window.dispatchEvent(new CustomEvent('GuardianPong', { detail: { connected: false } }));
+        }
+    } else if (message.type === 'GuardianSetBreakMode') {
+        try {
+            chrome.runtime.sendMessage({ action: "SET_BREAK_MODE", isBreak: message.isBreak });
+        } catch (err) { }
+    } else if (message.type === 'GuardianTimerState') {
+        try {
+            chrome.runtime.sendMessage({
+                action: "SET_TIMER_STATE",
+                isTimerRunning: message.isTimerRunning,
+                isReadingMode: message.isReadingMode,
+                targetEndTime: message.targetEndTime || null
+            });
+        } catch (err) { }
+    } else if (message.type === 'GuardianFocusWarningCount') {
+        try {
+            chrome.runtime.sendMessage({
+                action: "SET_WARNING_SECONDS",
+                seconds: message.seconds !== undefined ? message.seconds : null
+            });
+        } catch (err) { }
     }
-});
-
-// 🌟 ฟังคำสั่งจากเว็บ Reading Time เมื่อมีการกด "พักเบรก" หรือ "กลับมาอ่านหนังสือ"
-window.addEventListener('GuardianSetBreakMode', (e) => {
-    try {
-        const isBreak = e.detail.isBreak;
-        chrome.runtime.sendMessage({ action: "SET_BREAK_MODE", isBreak: isBreak });
-    } catch (err) { }
-});
-
-// 🌟 ฟัง Event สถานะการจับเวลาและโหมดการอ่านจากเว็บ Reading Time
-window.addEventListener('GuardianTimerState', (e) => {
-    try {
-        const { isTimerRunning, isReadingMode, targetEndTime } = e.detail;
-        chrome.runtime.sendMessage({
-            action: "SET_TIMER_STATE",
-            isTimerRunning,
-            isReadingMode,
-            targetEndTime: targetEndTime || null
-        });
-    } catch (err) { }
-});
-
-// 🌟 ฟัง Event ตัวเลขเวลานับถอยหลังเตือนจากเว็บ Reading Time
-window.addEventListener('GuardianFocusWarningCount', (e) => {
-    try {
-        const { seconds } = e.detail;
-        chrome.runtime.sendMessage({
-            action: "SET_WARNING_SECONDS",
-            seconds: seconds !== undefined ? seconds : null
-        });
-    } catch (err) { }
 });
 
 // 🌟 ตรวจสอบและเชื่อมต่อพอร์ตไปยัง background.js หากเป็นหน้าเว็บจับเวลา
