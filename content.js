@@ -131,6 +131,24 @@ function connectToBackground() {
 // ==========================================
 // ฟังก์ชันสำหรับบังหน้าเว็บ (Strict Mode Overlay)
 // ==========================================
+// ฟังก์ชันสำหรับสั่นจอยเกมในหน้าเว็บบล็อกเกอร์ส่วนขยาย
+function triggerExtensionGamepadVibration(duration, intensity) {
+    if (!navigator.getGamepads) return;
+    try {
+        const gps = navigator.getGamepads();
+        for (const gp of gps) {
+            if (gp && gp.vibrationActuator) {
+                gp.vibrationActuator.playEffect("dual-rumble", {
+                    startDelay: 0,
+                    duration: duration,
+                    strongMagnitude: intensity,
+                    weakMagnitude: intensity
+                }).catch(() => {});
+            }
+        }
+    } catch (e) {}
+}
+
 function updateCountdownDisplay() {
     const warningSecEl = document.getElementById('guardian-warning-seconds');
 
@@ -139,6 +157,11 @@ function updateCountdownDisplay() {
             ? activeWarningSeconds 
             : 10;
         warningSecEl.innerText = displaySecs;
+        
+        // สั่นจอยสะกิดเตือนทุกวินาทีระหว่างเวลานับถอยหลังของเว็บบล็อกเกอร์
+        if (displaySecs > 0 && displaySecs <= 10) {
+            triggerExtensionGamepadVibration(250, 0.7);
+        }
     }
 }
 
@@ -189,6 +212,7 @@ function injectStrictModeBlocker() {
                 <div style="font-size: 16px; font-weight: bold; color: #ef4444; display: flex; align-items: center; gap: 6px; justify-content: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">⚠️ ตรวจพบเว็บอื่น!</div>
                 <div style="font-size: 14px; color: #fca5a5; margin-bottom: 12px;">จะสลับเป็นพักใน</div>
                 <div style="font-size: 48px; font-weight: 800; color: #ef4444; font-family: monospace; letter-spacing: 1px; text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);"><span id="guardian-warning-seconds" style="font-weight: 800;">10</span> วินาที</div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 10px; font-style: italic;">(กดปุ่มใดๆ บนจอยเกมของคุณเพื่อจำลองเปิดใช้งานมอเตอร์สั่น)</div>
             </div>
 
             <div style="display: flex; gap: 15px;">
