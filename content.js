@@ -133,6 +133,7 @@ function connectToBackground() {
 // ==========================================
 // ฟังก์ชันสำหรับสั่นจอยเกมในหน้าเว็บบล็อกเกอร์ส่วนขยาย
 function triggerExtensionGamepadVibration(duration, intensity) {
+    if (document.hidden) return; // 🌟 ห้ามสั่นหากแท็บนี้เป็นแท็บเบื้องหลัง (Background Tab)
     if (!navigator.getGamepads) return;
     try {
         const gps = navigator.getGamepads();
@@ -155,11 +156,12 @@ function updateCountdownDisplay() {
     if (warningSecEl) {
         const displaySecs = (activeWarningSeconds !== null && activeWarningSeconds !== undefined && activeWarningSeconds >= 0) 
             ? activeWarningSeconds 
-            : 10;
+            : 0; // 🌟 หากเป็น null/undefined ให้เริ่มต้นเป็น 0 แทนที่จะเป็น 10
         warningSecEl.innerText = displaySecs;
         
         // สั่นจอยสะกิดเตือนทุกวินาทีระหว่างเวลานับถอยหลังของเว็บบล็อกเกอร์
-        if (displaySecs > 0 && displaySecs <= 10) {
+        // 🌟 ต้องแน่ใจว่า activeWarningSeconds ไม่เป็น null/undefined และมีค่าเตือน > 0
+        if (activeWarningSeconds !== null && activeWarningSeconds !== undefined && displaySecs > 0 && displaySecs <= 10) {
             triggerExtensionGamepadVibration(250, 0.7);
         }
     }
@@ -255,7 +257,20 @@ function injectStrictModeBlocker() {
         document.documentElement.appendChild(blocker);
         document.documentElement.style.overflow = 'hidden';
 
-        document.getElementById('guardian-go-back-btn').addEventListener('click', () => window.history.back());
+        document.getElementById('guardian-go-back-btn').addEventListener('click', () => {
+            // 🌟 หยุดสั่นจอยทันทีก่อนที่จะนำทางกลับ
+            try {
+                if (navigator.getGamepads) {
+                    const gps = navigator.getGamepads();
+                    for (const gp of gps) {
+                        if (gp && gp.vibrationActuator && gp.vibrationActuator.reset) {
+                            gp.vibrationActuator.reset().catch(() => {});
+                        }
+                    }
+                }
+            } catch (e) {}
+            window.history.back();
+        });
         document.getElementById('guardian-close-tab-btn').addEventListener('click', () => {
             chrome.runtime.sendMessage({ action: "CLOSE_CURRENT_TAB" });
         });
@@ -276,4 +291,15 @@ function removeStrictModeBlocker() {
         clearInterval(strictModeTimerInterval);
         strictModeTimerInterval = null;
     }
+    // 🌟 หยุดสั่นจอยทันทีเมื่อปลดบล็อก/ปิดหน้าต่างบล็อกเกอร์
+    try {
+        if (navigator.getGamepads) {
+            const gps = navigator.getGamepads();
+            for (const gp of gps) {
+                if (gp && gp.vibrationActuator && gp.vibrationActuator.reset) {
+                    gp.vibrationActuator.reset().catch(() => {});
+                }
+            }
+        }
+    } catch (e) {}
 }
