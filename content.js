@@ -3,6 +3,7 @@ const DEFAULT_MAIN_URL = 'comed.edu.npu.ac.th';
 let activeTargetEndTime = null;
 let activeWarningSeconds = null;
 let strictModeTimerInterval = null;
+let activeGamepadSettings = null;
 
 checkAndBlockSelf();
 
@@ -13,9 +14,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 function checkAndBlockSelf() {
-    chrome.storage.local.get(['isEnabled', 'allowedSites', 'isStrictMode', 'isBreakMode', 'isTimerRunning', 'isReadingMode', 'targetEndTime', 'warningSeconds'], (data) => {
+    chrome.storage.local.get(['isEnabled', 'allowedSites', 'isStrictMode', 'isBreakMode', 'isTimerRunning', 'isReadingMode', 'targetEndTime', 'warningSeconds', 'gamepadSettings'], (data) => {
         activeTargetEndTime = data.targetEndTime || null;
         activeWarningSeconds = data.warningSeconds !== undefined ? data.warningSeconds : null;
+        activeGamepadSettings = data.gamepadSettings || null;
         
         const isEnabled = data.isEnabled ?? true;
         const isStrictMode = data.isStrictMode || false;
@@ -108,6 +110,13 @@ window.addEventListener('message', (event) => {
                 seconds: message.seconds !== undefined ? message.seconds : null
             });
         } catch (err) { }
+    } else if (message.type === 'GuardianGamepadSettings') {
+        try {
+            chrome.runtime.sendMessage({
+                action: "SET_GAMEPAD_SETTINGS",
+                settings: message.settings
+            });
+        } catch (err) { }
     }
 });
 
@@ -134,16 +143,26 @@ function connectToBackground() {
 // ฟังก์ชันสำหรับสั่นจอยเกมในหน้าเว็บบล็อกเกอร์ส่วนขยาย
 function triggerExtensionGamepadVibration(duration, intensity) {
     if (document.hidden) return; // 🌟 ห้ามสั่นหากแท็บนี้เป็นแท็บเบื้องหลัง (Background Tab)
+    
+    // 🌟 ตรวจสอบว่าเปิดระบบสั่นของจอยเกมอยู่หรือไม่
+    if (activeGamepadSettings && activeGamepadSettings.vibrateEnable === false) return;
+
     if (!navigator.getGamepads) return;
     try {
+        // 🌟 คำนวณความแรงตามเป้าหมายระดับความแรงสั่น (intensity) จากการตั้งค่า
+        const factor = (activeGamepadSettings && activeGamepadSettings.intensity !== undefined) 
+            ? activeGamepadSettings.intensity / 100 
+            : 0.8; // ค่าเริ่มต้น 80% หากยังไม่มีข้อมูล
+        const finalIntensity = Math.min(1.0, Math.max(0.0, intensity * factor));
+
         const gps = navigator.getGamepads();
         for (const gp of gps) {
             if (gp && gp.vibrationActuator) {
                 gp.vibrationActuator.playEffect("dual-rumble", {
                     startDelay: 0,
                     duration: duration,
-                    strongMagnitude: intensity,
-                    weakMagnitude: intensity
+                    strongMagnitude: finalIntensity,
+                    weakMagnitude: finalIntensity
                 }).catch(() => {});
             }
         }

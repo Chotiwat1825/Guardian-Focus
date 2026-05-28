@@ -118,6 +118,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         sendResponse({ success: true });
     }
+
+    if (request.action === "SET_GAMEPAD_SETTINGS") {
+        chrome.storage.local.set({
+            gamepadSettings: request.settings || null
+        });
+        sendResponse({ success: true });
+    }
 });
 
 // เมื่อผู้ใช้สลับแท็บ
